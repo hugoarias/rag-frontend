@@ -59,7 +59,10 @@ export async function queryStreaming(
         if (line.startsWith('event:')) {
           currentEvent = line.slice(6).trim();
         } else if (line.startsWith('data:')) {
-          const data = line.slice(5).trim();
+          // Use slice(6) to preserve a single leading space that may be part of the token.
+          // SSE spec: "data:" followed by an optional single space before the value.
+          const raw = line.slice(5);
+          const data = raw.startsWith(' ') ? raw.slice(1) : raw;
           if (currentEvent === 'sources') {
             callbacks.onSources(JSON.parse(data) as Source[]);
           } else if (currentEvent === 'token') {

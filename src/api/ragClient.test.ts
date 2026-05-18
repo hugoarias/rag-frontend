@@ -54,7 +54,7 @@ describe('queryStreaming', () => {
     expect(onSources).toHaveBeenCalledWith([{ file: 'a.md', chunk: 'hello' }]);
     expect(onToken).toHaveBeenCalledTimes(2);
     expect(onToken).toHaveBeenNthCalledWith(1, 'Foo');
-    expect(onToken).toHaveBeenNthCalledWith(2, 'bar');
+    expect(onToken).toHaveBeenNthCalledWith(2, ' bar');
     expect(onDone).toHaveBeenCalledOnce();
     expect(onError).not.toHaveBeenCalled();
   });
@@ -109,6 +109,20 @@ describe('queryStreaming', () => {
     });
 
     expect(onError).toHaveBeenCalledWith(expect.objectContaining({ message: 'API error: 500' }));
+  });
+
+  it('preserves leading spaces in token data (word separation)', async () => {
+    // Backend sends tokens with a leading space to separate words.
+    // "data: hello" → "hello", "data:  world" → " world" (space is content)
+    mockFetchOk([
+      'event: token\ndata: hello\n\nevent: token\ndata:  world\n\nevent: done\ndata: {}\n\n',
+    ]);
+
+    const onToken = vi.fn();
+    await queryStreaming('q', { onSources: vi.fn(), onToken, onDone: vi.fn(), onError: vi.fn() });
+
+    expect(onToken).toHaveBeenNthCalledWith(1, 'hello');
+    expect(onToken).toHaveBeenNthCalledWith(2, ' world');
   });
 
   it('handles SSE chunks split across multiple reads', async () => {
